@@ -43,8 +43,6 @@ export default function Footer() {
       </div>
       <div className="footer-bottom">
         <div className="footer-bottom-inner">
-          <p>&copy; {new Date().getFullYear()} TechJobs. All rights reserved.</p>
-          <p className="footer-note">Frontend demo — data is mocked, no backend.</p>
         </div>
       </div>
     </footer>
