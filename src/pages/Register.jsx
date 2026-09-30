@@ -2,13 +2,23 @@ import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import AuthForm from '../components/AuthForm.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { describeError } from '../utils/formErrors.js';
 
 /**
  * Register.jsx
  * ------------
- * Professional registration form with client-side validation
- * (including password + confirm password matching). Registers the account
- * locally and navigates to the dashboard on success.
+ * Creates a real account with POST /auth/register.
+ *
+ * Two things worth pointing out:
+ *   • `fullName` (the label the UI shows) is sent as `name`, which is what the
+ *     User model expects — the API contract wins over the old mock wording;
+ *   • the role picker is NOT cosmetic: it is stored on the account and decides
+ *     what the user can do later (an employer may post jobs, a jobseeker may
+ *     apply). The backend accepts only 'jobseeker' and 'employer' here and
+ *     rejects 'admin', so those are the only options offered.
+ *
+ * A successful registration returns a JWT immediately, so the user is logged
+ * in and lands on the dashboard without a second step.
  */
 export default function Register() {
   const { user, register } = useAuth();
@@ -19,9 +29,11 @@ export default function Register() {
     email: '',
     password: '',
     confirmPassword: '',
+    role: 'jobseeker',
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Already logged in? Send them to the dashboard.
   if (user) {
@@ -47,8 +59,9 @@ export default function Register() {
       name: 'password',
       label: 'Password',
       type: 'password',
-      placeholder: 'Create a password (min 6 characters)',
+      placeholder: 'Create a password',
       autoComplete: 'new-password',
+      hint: 'At least 8 characters.',
     },
     {
       name: 'confirmPassword',
@@ -56,6 +69,16 @@ export default function Register() {
       type: 'password',
       placeholder: 'Re-enter your password',
       autoComplete: 'new-password',
+    },
+    {
+      name: 'role',
+      label: 'I am joining as',
+      type: 'select',
+      options: [
+        { value: 'jobseeker', label: 'Job seeker — I want to apply for jobs' },
+        { value: 'employer', label: 'Employer — I want to post jobs' },
+      ],
+      hint: 'This decides what you can do: employers post jobs, job seekers apply.',
     },
   ];
 
@@ -83,8 +106,10 @@ export default function Register() {
 
     if (!formData.password) {
       errors.password = 'Password is required.';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters.';
+    } else if (formData.password.length < 8) {
+      // The API requires 8 characters (12 salt rounds of bcrypt are applied to
+      // it server-side — the password never travels or is stored as plain text).
+      errors.password = 'Password must be at least 8 characters.';
     }
 
     if (!formData.confirmPassword) {
@@ -96,22 +121,32 @@ export default function Register() {
     return errors;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
     const validationErrors = validate();
     setFieldErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
-    const result = register({
-      fullName: formData.fullName,
-      email: formData.email,
-      password: formData.password,
-    });
+    setSubmitting(true);
+    setFormError('');
 
-    if (result.success) {
+    try {
+      await register({
+        name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        role: formData.role,
+      });
+
       navigate('/dashboard', { replace: true });
-    } else {
-      setFormError(result.error || 'Something went wrong. Please try again.');
+    } catch (error) {
+      // 409 = that e-mail is taken, 400 = the field list from the API.
+      setFormError(
+        describeError(error, 'Registration failed. Please try again.')
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -127,12 +162,13 @@ export default function Register() {
   return (
     <AuthForm
       title="Create your account"
-      subtitle="Join TechJobs to apply for roles and save your favourite jobs."
+      subtitle="Join TechJobs to apply for roles or to publish your own job openings."
       fields={fields}
       formData={formData}
       onFieldChange={handleFieldChange}
       onSubmit={handleSubmit}
       buttonText="Register"
+      busy={submitting}
       fieldErrors={fieldErrors}
       error={formError}
       footer={footer}

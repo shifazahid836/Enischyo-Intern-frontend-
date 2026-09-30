@@ -2,8 +2,17 @@
  * jobStorage.js
  * -------------
  * Tiny localStorage helpers for the "Saved" and "Applied" job lists.
- * The job board is frontend-only, so user actions are persisted in the
- * browser instead of a database.
+ *
+ * The jobs themselves now live in MongoDB, but these two lists are still kept
+ * in the browser on purpose:
+ *
+ *   • "saved"   is a personal bookmark list the API has no endpoint for;
+ *   • "applied" is only a local mirror used to stop the Apply button from
+ *     being offered twice. The source of truth is the applications collection,
+ *     which is what the dashboard lists.
+ *
+ * Job ids are the MongoDB ObjectId strings from the API, so they are always
+ * stored and compared as strings.
  */
 
 const SAVED_KEY = 'techjobs_saved_ids';
@@ -40,10 +49,4 @@ export function toggleJobInList(key, id) {
   const next = exists ? ids.filter((x) => x !== idStr) : [...ids, idStr];
   localStorage.setItem(key, JSON.stringify(next));
   return !exists;
-}
-
-/** Map a list of stored ids back to full job objects. */
-export function jobsFromIds(jobs, key) {
-  const ids = getJobIds(key);
-  return jobs.filter((job) => ids.includes(String(job.id)));
 }

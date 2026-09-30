@@ -7,10 +7,16 @@ import { useAuth } from '../context/AuthContext.jsx';
  * ----------
  * Responsive top navigation bar. Collapses into a hamburger menu on
  * smaller screens and adapts its links depending on login state.
+ *
+ * The role from the JWT decides what is shown:
+ *   • "Post a Job" is rendered for employers ONLY — a jobseeker never sees the
+ *     link, on top of the API refusing the request with 403;
+ *   • a small role badge next to the name makes it obvious which account you
+ *     are using while testing the different permission levels.
  */
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, isEmployer, logout } = useAuth();
   const navigate = useNavigate();
 
   const closeMenu = () => setMenuOpen(false);
@@ -23,6 +29,8 @@ export default function Navbar() {
 
   const linkClass = ({ isActive }) =>
     isActive ? 'nav-link active' : 'nav-link';
+
+  const firstName = user?.name?.split(' ')[0] || '';
 
   return (
     <header className="navbar">
@@ -58,12 +66,28 @@ export default function Navbar() {
               >
                 Dashboard
               </NavLink>
-              <span className="nav-user" title={user.email}>
+
+              {/* Employers only — mirrors `authorize('employer')` on POST /jobs */}
+              {isEmployer && (
+                <NavLink
+                  to="/post-job"
+                  className={({ isActive }) =>
+                    isActive ? 'nav-link nav-link-cta active' : 'nav-link nav-link-cta'
+                  }
+                  onClick={closeMenu}
+                >
+                  Post a Job
+                </NavLink>
+              )}
+
+              <span className="nav-user" title={`${user.email} — role: ${user.role}`}>
                 <span className="nav-user-avatar">
-                  {user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </span>
-                {user.fullName?.split(' ')[0]}
+                {firstName}
+                <span className={`nav-role nav-role-${user.role}`}>{user.role}</span>
               </span>
+
               <button
                 type="button"
                 className="nav-link nav-logout"

@@ -1,129 +1,168 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import * as authApi from '../api/auth.js';
+import {
+  UNAUTHORIZED_EVENT,
+  clearSession,
+  getStoredUser,
+  getToken,
+  saveSession,
+} from '../api/client.js';
 
 /**
  * AuthContext.jsx
  * ---------------
- * Simulates authentication locally using React state + localStorage.
- * There is NO real backend: accounts are stored in the browser only.
+ * The single source of truth for "who is logged in?" — now backed by the real
+ * API instead of fake browser-only accounts.
+ *
+ * What it does:
+ *   • login() / register() call POST /auth/login or /auth/register, then keep
+ *     the returned JWT + profile (the token itself is written to localStorage
+ *     by api/client.js, which also attaches it to every later request);
+ *   • on mount it re-validates the stored token with GET /auth/me, so an
+ *     expired token (or an account deleted by an admin) cannot leave the UI
+ *     stuck in a "logged in, but every request fails" state;
+ *   • a 401 coming back from ANY request wipes the session and logs the user
+ *     out here as well;
+ *   • `role` drives the conditional UI: employers get "Post a Job",
+ *     jobseekers get "Apply".
+ *
+ * `loading` stays true until the stored token has been checked. Protected
+ * routes wait for it — otherwise a page refresh would bounce the user to
+ * /login for a split second before /auth/me had answered.
  */
 
 const AuthContext = createContext(null);
 
-const USERS_KEY = 'techjobs_users';
-const CURRENT_USER_KEY = 'techjobs_current_user';
-
-function readUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function readCurrentUser() {
-  try {
-    const raw = localStorage.getItem(CURRENT_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(readCurrentUser);
+  const [user, setUser] = useState(() => getStoredUser());
+  const [loading, setLoading] = useState(true);
 
-  // Keep the current session in sync with localStorage.
+  // --- (1) re-validate the stored token once, on mount ----------------------
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(CURRENT_USER_KEY);
-    }
-  }, [user]);
+    let cancelled = false; // prevents a setState after the component unmounts
 
-  /**
-   * Register a new account locally. Returns { success, error? }.
-   */
-  const register = ({ fullName, email, password }) => {
-    const users = readUsers();
-    const emailExists = users.some(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
+    const token = getToken();
 
-    if (emailExists) {
-      return {
-        success: false,
-        error: 'An account with this email already exists. Please log in.',
+    if (!token) {
+      // Nothing stored → this is simply a logged-out visitor.
+      clearSession();
+      setUser(null);
+      setLoading(false);
+      return () => {
+        cancelled = true;
       };
     }
 
-    const newUser = {
-      id: Date.now(),
-      fullName: fullName.trim(),
-      email: email.trim(),
-      password,
-      joinedAt: new Date().toISOString().slice(0, 10),
+    authApi
+      .me()
+      .then((profile) => {
+        if (cancelled) return;
+        // The token is valid: prefer the FRESH profile from the server over
+        // the cached copy, so a role change made by an admin takes effect.
+        setUser(profile);
+        saveSession({ token, user: profile });
+      })
+      .catch(() => {
+        // Expired/tampered token, deleted account, or the API is unreachable.
+        if (cancelled) return;
+        clearSession();
+        setUser(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
+  }, []);
 
-    users.push(newUser);
-    saveUsers(users);
-    setUser({
-      id: newUser.id,
-      fullName: newUser.fullName,
-      email: newUser.email,
-      joinedAt: newUser.joinedAt,
-    });
+  // --- (2) log out when the API rejects the token ---------------------------
+  useEffect(() => {
+    const handleUnauthorized = () => setUser(null);
 
-    return { success: true };
-  };
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
+  }, []);
+
+  // --- (3) the actions ------------------------------------------------------
+  /**
+   * Logs in and stores the session.
+   *
+   * Throws an ApiError carrying the backend's message (wrong credentials,
+   * "too many login attempts" after 5 tries, …) — the pages catch it and show
+   * it in their alert box, which is why this is `async` instead of returning
+   * a `{ success, error }` object like the old mock version did.
+   */
+  const login = useCallback(async ({ email, password }) => {
+    const session = await authApi.login({ email, password });
+    saveSession(session);
+    setUser(session.user);
+    return session.user;
+  }, []);
 
   /**
-   * Simulate a login. Registered users are matched by email + password.
-   * To keep the demo usable without signing up first, any other
-   * well-formed credentials create a temporary "guest" session.
+   * Creates an account. `role` is 'jobseeker' or 'employer' — the backend
+   * refuses 'admin' during public registration.
    */
-  const login = ({ email, password }) => {
-    const users = readUsers();
-    const existing = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
-    );
+  const register = useCallback(async ({ name, email, password, role }) => {
+    const session = await authApi.register({ name, email, password, role });
+    saveSession(session);
+    setUser(session.user);
+    return session.user;
+  }, []);
 
-    if (existing && existing.password === password) {
-      setUser({
-        id: existing.id,
-        fullName: existing.fullName,
-        email: existing.email,
-        joinedAt: existing.joinedAt,
-      });
-      return { success: true };
-    }
+  /**
+   * Logs out locally. A JWT cannot be "revoked" server-side without a token
+   * blacklist, so discarding the token IS the logout: every protected request
+   * will now be answered with 401.
+   */
+  const logout = useCallback(() => {
+    clearSession();
+    setUser(null);
+  }, []);
 
-    const guestName =
-      email.split('@')[0].replace(/[._-]+/g, ' ').trim() || 'Guest';
-    const prettyName = guestName.replace(/\b\w/g, (c) => c.toUpperCase());
+  /**
+   * Changes the password and stores the FRESH token the API returns, because
+   * tokens issued before the change stay valid until they expire.
+   */
+  const changePassword = useCallback(async ({ oldPassword, newPassword }) => {
+    const session = await authApi.changePassword({ oldPassword, newPassword });
+    saveSession(session);
+    setUser(session.user);
+    return session.user;
+  }, []);
 
-    setUser({
-      id: Date.now(),
-      fullName: prettyName,
-      email: email.trim(),
-      joinedAt: new Date().toISOString().slice(0, 10),
-      guest: true,
-    });
+  // --- (4) the context value ------------------------------------------------
+  const value = useMemo(() => {
+    const role = user?.role ?? null;
 
-    return { success: true };
-  };
+    return {
+      user,
+      role,
+      loading,
+      isAuthenticated: Boolean(user),
+      // Role helpers keep the conditional rendering in the components readable:
+      //   {isEmployer && <PostJobButton />}
+      isEmployer: role === 'employer',
+      isJobseeker: role === 'jobseeker',
+      isAdmin: role === 'admin',
+      login,
+      register,
+      logout,
+      changePassword,
+    };
+  }, [user, loading, login, register, logout, changePassword]);
 
-  const logout = () => setUser(null);
-
-  return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 /**

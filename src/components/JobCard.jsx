@@ -5,13 +5,17 @@ import {
   isJobInList,
   toggleJobInList,
 } from '../utils/jobStorage.js';
-import { getInitials, typeBadgeClass } from '../utils/helpers.js';
+import { getInitials, typeBadgeClass, formatDate } from '../utils/helpers.js';
 
 /**
  * JobCard.jsx
  * -----------
  * Reusable card that summarises a single job and links to its details page.
  * Includes a small "Save / Unsave" bookmark toggle persisted in localStorage.
+ *
+ * `job` is expected to be a VIEW MODEL from utils/jobAdapter.js (string `id`,
+ * `company` as a name, a pre-formatted `salary` string, …), not the raw
+ * MongoDB document — that keeps this component free of API details.
  */
 export default function JobCard({ job }) {
   const [saved, setSaved] = useState(() =>
@@ -25,6 +29,9 @@ export default function JobCard({ job }) {
   };
 
   const badges = job.keywords.slice(0, 3);
+  // postedDate is an ISO timestamp from the API, so it is formatted here
+  // (the mock data used to carry a ready-made "Aug 28, 2026" string).
+  const posted = formatDate(job.postedDate);
 
   return (
     <article className="job-card">
@@ -47,8 +54,9 @@ export default function JobCard({ job }) {
 
       <div className="job-card-meta">
         <span className="meta-item">&#128205; {job.location}</span>
-        <span className={`badge ${typeBadgeClass(job.type)}`}>{job.type}</span>
-        <span className="badge badge-slate">{job.experience}</span>
+        <span className={`badge ${typeBadgeClass(job.typeValue || job.type)}`}>
+          {job.type}
+        </span>
       </div>
 
       <p className="job-card-salary">{job.salary}</p>
@@ -68,7 +76,7 @@ export default function JobCard({ job }) {
         <Link to={`/jobs/${job.id}`} className="btn btn-primary btn-sm">
           View Details
         </Link>
-        <span className="posted-date">Posted {job.postedDate}</span>
+        {posted && <span className="posted-date">Posted {posted}</span>}
       </div>
     </article>
   );

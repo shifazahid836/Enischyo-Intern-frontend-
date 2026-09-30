@@ -2,12 +2,20 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import AuthForm from '../components/AuthForm.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { describeError } from '../utils/formErrors.js';
 
 /**
  * Login.jsx
  * ---------
- * Professional login form with client-side validation. Simulates login
- * locally (no backend) and redirects to the dashboard on success.
+ * Posts the credentials to POST /auth/login through AuthContext.
+ *
+ * On success the JWT is stored in localStorage by the API client and the user
+ * is sent to the page they came from (`location.state.from`, set by the
+ * "log in before applying" link on the job details page) or to the dashboard.
+ *
+ * On failure the message from the backend is shown as-is — it already says
+ * things like "Invalid email or password." or, after five tries in fifteen
+ * minutes, "Too many login attempts. Try again in 15 minutes."
  */
 export default function Login() {
   const { user, login } = useAuth();
@@ -17,6 +25,7 @@ export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Already logged in? Send them to the dashboard.
   if (user) {
@@ -50,35 +59,47 @@ export default function Login() {
 
   const validate = () => {
     const nextErrors = {};
+
     if (!formData.email.trim()) {
       nextErrors.email = 'Email is required.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       nextErrors.email = 'Please enter a valid email address.';
     }
+
     if (!formData.password) {
       nextErrors.password = 'Password is required.';
-    } else if (formData.password.length < 6) {
-      nextErrors.password = 'Password must be at least 6 characters.';
+    } else if (formData.password.length < 8) {
+      // The API requires at least 8 characters (it used to be 6 in the mock
+      // version), so checking here first saves a pointless round trip.
+      nextErrors.password = 'Password must be at least 8 characters.';
     }
+
     return nextErrors;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
     const validationErrors = validate();
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
-    const result = login({
-      email: formData.email.trim(),
-      password: formData.password,
-    });
+    setSubmitting(true);
+    setFormError('');
 
-    if (result.success) {
+    try {
+      await login({
+        email: formData.email.trim(),
+        password: formData.password,
+      });
+
       const from = location.state?.from || '/dashboard';
       navigate(from, { replace: true });
-    } else {
-      setFormError(result.error || 'Something went wrong. Please try again.');
+    } catch (error) {
+      // 401 (wrong credentials), 429 (rate limited) or a network failure.
+      setFormError(describeError(error, 'Login failed. Please try again.'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -94,12 +115,13 @@ export default function Login() {
   return (
     <AuthForm
       title="Welcome back"
-      subtitle="Log in to your TechJobs account to apply and track jobs."
+      subtitle="Log in to your TechJobs account to apply for jobs and track them."
       fields={fields}
       formData={formData}
       onFieldChange={handleFieldChange}
       onSubmit={handleSubmit}
       buttonText="Login"
+      busy={submitting}
       fieldErrors={errors}
       error={formError}
       footer={footer}
