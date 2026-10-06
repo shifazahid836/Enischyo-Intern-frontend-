@@ -4,20 +4,20 @@
 
 /* ---------- Design tokens ---------- */
 :root {
-  --primary: #4f46e5;
-  --primary-dark: #4338ca;
-  --primary-light: #eef2ff;
-  --accent: #7c3aed;
+  --primary: #0a6cff;          /* electric blue */
+  --primary-dark: #0747c4;     /* deeper electric blue (hover / accents) */
+  --primary-light: #e8f1ff;    /* very light electric blue tint */
+  --accent: #00d1ff;           /* electric cyan (gradient partner) */
 
-  --navy: #0b1120;
-  --navy-light: #151e33;
+  --navy: #0a1a33;             /* deep navy (navbar / footer / hero base) */
+  --navy-light: #12294b;
 
-  --bg: #f4f6fb;
+  --bg: #f1f5fb;
   --card: #ffffff;
-  --border: #e2e8f0;
+  --border: #dce5f2;
 
-  --text: #0f172a;
-  --muted: #64748b;
+  --text: #0c1b33;
+  --muted: #5b6b84;
 
   --success: #059669;
   --success-bg: #ecfdf5;
@@ -26,9 +26,9 @@
 
   --radius: 0.85rem;
   --radius-sm: 0.55rem;
-  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.07);
-  --shadow-md: 0 10px 28px rgba(15, 23, 42, 0.1);
-  --shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.16);
+  --shadow-sm: 0 1px 3px rgba(10, 26, 51, 0.08);
+  --shadow-md: 0 10px 28px rgba(10, 26, 51, 0.12);
+  --shadow-lg: 0 20px 45px rgba(10, 26, 51, 0.18);
 
   --font: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue',
     Arial, sans-serif;
@@ -159,7 +159,7 @@ p {
 }
 
 .brand-accent {
-  color: #a5b4fc;
+  color: #63b0ff;
 }
 
 /* Nav menu (desktop default: horizontal row) */
@@ -293,7 +293,7 @@ p {
 
 .btn-primary:hover {
   background: var(--primary-dark);
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+  box-shadow: 0 6px 16px rgba(10, 108, 255, 0.4);
 }
 
 .btn-outline {
@@ -375,15 +375,15 @@ p {
 }
 
 .badge-violet {
-  background: #f5f3ff;
-  color: #6d28d9;
-  border-color: #ddd6fe;
+  background: #e8f1ff;
+  color: #0747c4;
+  border-color: #b8d8ff;
 }
 
 .badge-blue {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
+  background: #e6faff;
+  color: #0a6e9e;
+  border-color: #a8e8f7;
 }
 
 .badge-teal {
@@ -412,7 +412,7 @@ p {
 
 .tag {
   background: var(--primary-light);
-  color: #4338ca;
+  color: var(--primary-dark);
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -424,9 +424,9 @@ p {
    ============================================================ */
 .hero {
   background:
-    radial-gradient(900px 400px at 85% -10%, rgba(124, 58, 237, 0.55), transparent),
-    radial-gradient(700px 380px at -10% 20%, rgba(56, 189, 248, 0.25), transparent),
-    linear-gradient(135deg, #0b1120 0%, #1e1b4b 55%, #312e81 100%);
+    radial-gradient(900px 400px at 85% -10%, rgba(0, 209, 255, 0.32), transparent),
+    radial-gradient(700px 380px at -10% 20%, rgba(10, 108, 255, 0.45), transparent),
+    linear-gradient(135deg, #06152b 0%, #0a2347 55%, #0b3a7a 100%);
   color: #fff;
   padding: 3.4rem 0 3.6rem;
 }
@@ -439,7 +439,7 @@ p {
   display: inline-block;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #c7d2fe;
+  color: #bfe0ff;
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
   font-size: 0.85rem;
@@ -456,7 +456,7 @@ p {
 }
 
 .hero-highlight {
-  background: linear-gradient(90deg, #a5b4fc, #c4b5fd);
+  background: linear-gradient(90deg, #7cc4ff, #00d1ff);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -529,7 +529,7 @@ p {
 .hint-link {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #e0e7ff;
+  color: #d6ecff;
   border-radius: 999px;
   padding: 0.15rem 0.6rem;
   font-size: 0.85rem;
@@ -595,7 +595,7 @@ p {
 .job-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-md);
-  border-color: #c7d2fe;
+  border-color: #b8d8ff;
 }
 
 .job-card-header {
@@ -1003,7 +1003,7 @@ p {
   padding: 3rem 1.25rem;
   flex: 1;
   background:
-    radial-gradient(700px 320px at 100% 0%, rgba(124, 58, 237, 0.12), transparent),
+    radial-gradient(700px 320px at 100% 0%, rgba(10, 108, 255, 0.14), transparent),
     var(--bg);
 }
 
@@ -1061,7 +1061,7 @@ p {
 .form-group input:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+  box-shadow: 0 0 0 3px rgba(10, 108, 255, 0.22);
 }
 
 .form-group input.input-error {
@@ -1104,7 +1104,7 @@ p {
    Dashboard
    ============================================================ */
 .dash-welcome {
-  background: linear-gradient(135deg, #1e1b4b, var(--primary) 70%, #6d28d9);
+  background: linear-gradient(135deg, #0a1a33, var(--primary) 65%, #00d1ff);
   border-radius: var(--radius);
   padding: 2rem 2.2rem;
   display: flex;
@@ -1125,7 +1125,7 @@ p {
 }
 
 .dash-welcome-sub {
-  color: #e0e7ff;
+  color: #d6ecff;
   margin: 0;
 }
 
@@ -1525,14 +1525,14 @@ p {
 .filter-select:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+  box-shadow: 0 0 0 3px rgba(10, 108, 255, 0.22);
 }
 
 /* --- Alerts: informational variant --------------------------- */
 .alert-info {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
+  background: #e8f1ff;
+  color: #0747c4;
+  border-color: #b8d8ff;
 }
 
 /* --- Selects + textareas inherit the input styling ----------- */
@@ -1559,7 +1559,7 @@ p {
 .form-group textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+  box-shadow: 0 0 0 3px rgba(10, 108, 255, 0.22);
 }
 
 .form-group select.input-error,
@@ -1654,8 +1654,8 @@ p {
 }
 
 .nav-role-employer {
-  background: rgba(139, 92, 246, 0.28);
-  color: #ddd6fe;
+  background: rgba(10, 108, 255, 0.32);
+  color: #bfe0ff;
 }
 
 .nav-role-admin {
