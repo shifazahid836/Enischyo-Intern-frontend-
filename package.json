@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "A professional, responsive Tech Job Board frontend built with React + Vite. Frontend-only application using mock data.",
+  "description": "A professional, responsive Tech Job Board frontend built with React + Vite, connected to the Job Board REST API with JWT auth and role-based UI.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
