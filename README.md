@@ -144,6 +144,35 @@ npm run build      # output goes to dist/
 npm run preview    # preview the production build locally
 ```
 
+### Deploying to Vercel
+
+[`vercel.json`](./vercel.json) pins the Vite preset (`npm run build` → `dist`)
+and adds the **SPA fallback** that React Router needs — without it a hard
+refresh on `/dashboard` or `/jobs/:id` is a 404, because those paths only exist
+in the browser. Built assets are excluded from the rewrite so they are always
+served directly:
+
+```json
+{ "source": "/:path((?!assets/|favicon).*)", "destination": "/index.html" }
+```
+
+Set one environment variable in **Project → Settings → Environment Variables**
+(*Production* and *Preview*) **before the first build**:
+
+| Name | Value |
+| --- | --- |
+| `VITE_API_BASE_URL` | `https://<your-api>.vercel.app/api` |
+
+The `/api` suffix matters: [`api/client.js`](./src/api/client.js) appends paths
+such as `/jobs` and `/auth/login` to this value.
+
+> ⚠️ Vite **inlines** the value at build time, so changing the variable on an
+> existing deployment does nothing until you redeploy.
+
+Frontend and API are separate Vercel projects on different origins, so the API's
+`CORS_ORIGIN` must be set to this project's production domain — see
+[`../backend/README.md`](../backend/README.md) → *Deploying to Vercel*.
+
 ---
 
 ## 🔐 How authentication works here
