@@ -37,7 +37,7 @@ export default function Login() {
       name: 'email',
       label: 'Email address',
       type: 'email',
-      placeholder: 'you@example.com',
+      placeholder: 'Enter your Email address',
       autoComplete: 'email',
     },
     {

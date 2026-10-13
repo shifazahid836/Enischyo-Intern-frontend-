@@ -45,14 +45,14 @@ export default function Register() {
       name: 'fullName',
       label: 'Full name',
       type: 'text',
-      placeholder: 'e.g. Ayesha Khan',
+      placeholder: 'Enter your full name',
       autoComplete: 'name',
     },
     {
       name: 'email',
       label: 'Email address',
       type: 'email',
-      placeholder: 'you@example.com',
+      placeholder: 'Enter your Email address',
       autoComplete: 'email',
     },
     {
