@@ -97,7 +97,8 @@ frontend/
 │   └── index.css            # Global styles
 │
 ├── index.html
-├── .env.example
+├── .env.example             # Template for local overrides
+├── .env.production          # Production API URL (committed — not a secret)
 ├── package.json
 ├── vite.config.js           # Dev proxy: /api → http://localhost:5000
 └── README.md
@@ -156,18 +157,34 @@ served directly:
 { "source": "/:path((?!assets/|favicon).*)", "destination": "/index.html" }
 ```
 
-Set one environment variable in **Project → Settings → Environment Variables**
-(*Production* and *Preview*) **before the first build**:
+Set the API base URL **before the first build**, either way round:
+
+**Option A — committed default (what this repo uses).** [`​.env.production`](./.env.production)
+holds the production value, so `vite build` picks it up with no dashboard setup
+at all:
+
+```ini
+VITE_API_BASE_URL=https://enischyo-intern-backend.vercel.app/api
+```
+
+It is committed on purpose: the value is **not** a secret (Vite inlines it into
+the public bundle) and it only applies to production builds — `npm run dev`
+still uses the `/api` proxy from `vite.config.js`.
+
+**Option B — host environment variable.** Set it in
+**Project → Settings → Environment Variables** (*Production* and *Preview*).
+A real environment variable wins over the `.env.production` file, so this is the
+right place to point a preview deployment at a different API:
 
 | Name | Value |
 | --- | --- |
 | `VITE_API_BASE_URL` | `https://<your-api>.vercel.app/api` |
 
-The `/api` suffix matters: [`api/client.js`](./src/api/client.js) appends paths
-such as `/jobs` and `/auth/login` to this value.
+Whichever you use, the `/api` suffix matters: [`api/client.js`](./src/api/client.js)
+appends paths such as `/jobs` and `/auth/login` to this value.
 
-> ⚠️ Vite **inlines** the value at build time, so changing the variable on an
-> existing deployment does nothing until you redeploy.
+> ⚠️ Vite **inlines** the value at build time, so changing it on an existing
+> deployment does nothing until you redeploy.
 
 Frontend and API are separate Vercel projects on different origins, so the API's
 `CORS_ORIGIN` must be set to this project's production domain — see
